@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WA State Park Units!</title>
+  <style>
+    /* Set the size of the map container */
+    #map {
+      height: 80vh;  /* Set map height to 80% of the viewport */
+      width: 100%;
+    }
+
+    /* Styling for the header */
+    h1, h2 {
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      z-index: 1;  /* Ensure text is above the map */
+    }
+
+    /* Title Styling */
+    h1 {
+      color: #006666;  /* Dark teal color */
+      font-size: 36px;
+    }
+
+    /* Subheader Styling */
+    h2 {
+      color: #66CCCC;  /* Lighter teal color */
+      font-size: 24px;
+    }
+
+    /* Container for the header */
+    .header-container {
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      padding-top: 20px;
+    }
+
+    /* Make sure the map is below the header */
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;  /* Full viewport height */
+    }
+
+    /* Container for the legend */
+    .legend {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+      z-index: 3;
+    }
+
+    .legend div {
+      margin: 5px 0;
+    }
+
+    .legend .color-box {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+     /* Styling for the text container below the map */
+     #text-container {
+      padding: 20px;
+      text-align: center;
+      background-color: #f4f4f4; /* Light grey background.  */
+      color: #333;
+      font-size: 18px;
+      flex: 1;
+    }
+
+  </style>
+  <!-- Include the Mapbox GL JS stylesheet -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.2/mapbox-gl.css" rel="stylesheet">
+  <!-- Include the Mapbox GL JS script -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.2/mapbox-gl.js"></script>
+</head>
+<body>
+
+  <!-- Header and Subheader -->
+  <div class="header-container">
+    <h1>WA State Park Units</h1>
+    <h2>Lab 4, Henry Pitts</h2>
+  </div>
+
+  <!-- Map container -->
+  <div id="map"></div>
+
+   <!-- Text container below the map --> 
+   <div id="text-container">
+    <p>Welcome to the world of Washington parks! This map shows their administrative units, as well as the relevant sub-region and  manager. Public lands must be protected! Enjoy perusing over a Celilo Falls inspired basemap, with salmon pink outlines.</p>
+  </div>
+
+   <!-- Legend Container -->
+  <div id="legend" class="legend">
+    <div><span class="color-box" style="background-color: rgba(255, 255, 255, 0.5);"></span>Park Area (Transparent White)</div>
+    <div><span class="color-box" style="background-color: #006666;"></span>Park Boundaries (Dark Salmon Outline)</div>
+  </div>
+
+  <script>
+    // Set your Mapbox access token
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaHBpdHRzNyIsImEiOiJjbTZ6ZGwwc3owM29mMmxwdDh5d3hlNzJjIn0.ZTOjpLgkl842mbe9k7ygMg';  // Replace with your own token
+
+    // Create a new map
+    const map = new mapboxgl.Map({
+      container: 'map', // ID of the map container div
+      style: 'mapbox://styles/hpitts7/cm7nvr5tj00bb01sre05h7q9k', // Map style
+      center: [-120.7401, 47.7511], // Center over Washington State (Longitude, Latitude)
+      zoom: 7, // Initial zoom level
+    });
+
+    // Add Scale Bar
+    map.addControl(new mapboxgl.ScaleControl({
+      maxWidth: 200,  // Max width of the scale bar
+      unit: 'imperial' // Units: 'metric', 'imperial', or 'nautical'
+    }));
+
+    // Add North Arrow (Compass Control)
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');  // Adding the Navigation Control (includes north arrow)
+
+    // Load and add GeoJSON data from GitHub (raw content)
+    fetch('https://raw.githubusercontent.com/hpitts7/Lab-4/5ae24d185d507a5ba3941330382f3e5e0330a583/Parks_Administrative_Boundaries.geojson')
+      .then(response => response.json())
+      .then(data => {
+        // Add GeoJSON data to the map as a source
+        map.on('load', function() {
+          map.addSource('parks-boundaries-source', {
+            type: 'geojson',
+            data: data  // GeoJSON data from the raw GitHub URL
+          });
+
+          // Add a layer to display the GeoJSON data (e.g., polygon fill layer)
+          map.addLayer({
+            id: 'parks-boundaries-layer',
+            type: 'fill',  // Use 'fill' type for polygons
+            source: 'parks-boundaries-source',
+            paint: {
+             'fill-color': 'rgba(255, 255, 255, 0.5)',  // Transparent white color
+    'fill-opacity': 0.5,
+    'fill-outline-color': '#E9967A'  // Dark salmon outline
+            }
+          });
+
+          // Add pop-up on click
+map.on('click', 'parks-boundaries-layer', function(e) {
+  var coordinates = e.lngLat;
+
+  // Get properties of the clicked feature
+  var feature = e.features[0].properties;
+
+  // Check if the properties exist, if not, set default values
+  var parkMgmntArea = feature.ParkMgmntArea || 'No management area available';
+  var parkSubRegion = feature.ParkSubRegion || 'No sub-region available';
+  var subRegionManager = feature.SubRegionManager || 'No manager available';
+
+  // Create the HTML content for the popup
+  var popupContent = `
+    <h3>${parkMgmntArea}</h3>
+    <p><strong>Sub-region:</strong> ${parkSubRegion}</p>
+    <p><strong>Sub-region Manager:</strong> ${subRegionManager}</p>
+  `;
+
+
+  // Create and display the popup
+  new mapboxgl.Popup()
+    .setLngLat(coordinates)
+    .setHTML(popupContent)
+    .addTo(map);
+});
+        });
+      })
+      .catch(error => {
+        console.error('Error loading GeoJSON data:', error);
+      });
+
+// Couldn't find a better place to put this with the slashes, but! I used CHAT GPT a lot to debug and set up my pop-ups! Mariah was also an absolute gem and helped me a ton!!
+
+
+  </script>
+</body>
+</html>
